@@ -34,11 +34,11 @@ body{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:va
 .panel-head{padding:22px 24px 0}
 .panel-head h2{font-size:1.12rem;font-weight:600}
 .panel-head p{color:var(--muted);font-size:.9rem;margin-top:3px}
-.sync-note{margin:16px 24px 0;padding:9px 12px;border-radius:9px;font-size:.8rem;background:var(--accent-soft);color:var(--accent-dark);display:none;align-items:center;gap:8px}
-.sync-note.show{display:flex}
-.sync-note.warn{background:#FBF3E6;color:#8A5B00}
 
-.rail-label{font-size:.78rem;color:var(--muted);font-weight:500;padding:22px 24px 10px}
+.rail-label{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;color:var(--muted);font-weight:500;padding:22px 24px 10px}
+.refresh{display:inline-flex;align-items:center;gap:5px;background:none;border:none;color:var(--accent);font:inherit;font-size:.76rem;font-weight:500;cursor:pointer}
+.refresh svg{width:13px;height:13px;transition:transform .5s}
+.refresh.spin svg{transform:rotate(360deg)}
 .rail{display:flex;gap:9px;overflow-x:auto;padding:0 24px 4px;scrollbar-width:thin}
 .rail::-webkit-scrollbar{height:6px}
 .rail::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
@@ -70,6 +70,7 @@ body{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:va
 .field textarea{resize:vertical;min-height:80px}
 .btn{width:100%;padding:12px;border:none;border-radius:10px;background:var(--accent);color:#fff;font:inherit;font-weight:600;font-size:.95rem;cursor:pointer;transition:background .12s}
 .btn:hover{background:var(--accent-dark)}
+.btn:disabled{opacity:.55;cursor:default}
 
 .done{display:none;padding:34px 24px 40px;text-align:center}
 .done.show{display:block}
@@ -105,30 +106,25 @@ body{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:va
       <div class="eyebrow" id="role"></div>
       <h1 class="name" id="mentorName"></h1>
       <div class="facts">
-        <div class="fact">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-          <div><div class="k">Meeting length</div><div class="v" id="fLen"></div></div>
-        </div>
-        <div class="fact">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
-          <div><div class="k">Where</div><div class="v" id="fWhere"></div></div>
-        </div>
-        <div class="fact">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
-          <div><div class="k">Time zone</div><div class="v" id="fTz"></div></div>
-        </div>
+        <div class="fact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div><div class="k">Meeting length</div><div class="v" id="fLen"></div></div></div>
+        <div class="fact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg><div><div class="k">Where</div><div class="v" id="fWhere"></div></div></div>
+        <div class="fact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg><div><div class="k">Time zone</div><div class="v" id="fTz"></div></div></div>
       </div>
     </aside>
 
     <main class="panel">
       <div class="panel-head">
         <h2>Pick a time</h2>
-        <p>Choose a day, then an open slot. I'll get your request and send a calendar invite back.</p>
+        <p>Choose a day, then an open slot. Times update as others book. I'll get your request and a calendar invite.</p>
       </div>
-      <div class="sync-note" id="syncNote"></div>
 
       <div id="picker">
-        <div class="rail-label">Days with openings</div>
+        <div class="rail-label">
+          <span>Days with openings</span>
+          <button class="refresh" id="refreshBtn" title="Refresh open times">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>Refresh
+          </button>
+        </div>
         <div class="rail" id="rail"></div>
         <div class="slots-wrap">
           <div class="slots-label" id="slotsLabel">Available times</div>
@@ -161,9 +157,9 @@ body{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:va
     <h3>Booking requests</h3>
     <div class="meta" id="adminMeta"></div>
     <div class="admin-actions">
+      <button id="reloadAdmin">Reload</button>
       <button id="copyCsv">Copy as CSV</button>
       <button id="dlCsv">Download CSV</button>
-      <button id="clearLog">Clear local copy</button>
       <button class="close" id="closeAdmin">Close</button>
     </div>
     <div id="adminBody"></div>
@@ -180,65 +176,37 @@ const CONFIG = {
   where:       "Curry Student Center or Zoom (I'll confirm in the invite)",
   bookingEmail:"abdi.mu@northeastern.edu",
   meetingMinutes: 30,
-  dayStart: "08:00",        // earliest a meeting can start
-  dayEnd:   "19:00",        // latest a meeting can END (7 PM)
-  daysAhead: 14,            // next 2 weeks
-  minNoticeHours: 12,       // hide slots sooner than this
+  dayStart: "08:00",
+  dayEnd:   "19:00",
+  daysAhead: 14,
+  minNoticeHours: 12,
+  refreshSeconds: 45,        // how often open times re-check the store
   timezoneLabel: "Eastern Time (Boston)",
   meetingDays: ["Mon","Tue","Wed","Thu","Fri"],
 
-  // Your commitments, read from your calendars (Boston wall-clock). Only busy
-  // start/end times are used — nothing about what the events are is shown.
-  // Recurring classes are listed on each date they occur in the window.
+  // Your commitments, read from your calendars (Boston wall-clock). Times only.
   manualBusy: [
-    // Tue Sep 15
-    {date:"2026-09-15", start:"09:50", end:"11:30"},  // DS 3000
-    {date:"2026-09-15", start:"13:35", end:"15:15"},  // CS 3200
-    {date:"2026-09-15", start:"15:25", end:"17:05"},  // DS 3500
-    {date:"2026-09-15", start:"17:00", end:"18:30"},  // OSOP meeting (approx from Outlook)
-    // Wed Sep 16
-    {date:"2026-09-16", start:"11:45", end:"13:25"},  // ECON 2315
-    {date:"2026-09-16", start:"13:00", end:"14:00"},  // Trader Joe's interview
-    {date:"2026-09-16", start:"14:30", end:"15:30"},  // Artisan Partners quant interview
-    // Thu Sep 17
-    {date:"2026-09-17", start:"10:30", end:"11:30"},  // ECON 1000 (TA)
-    // Fri Sep 18
-    {date:"2026-09-18", start:"09:50", end:"11:30"},  // DS 3000
-    {date:"2026-09-18", start:"11:45", end:"13:25"},  // ECON 2315
-    {date:"2026-09-18", start:"13:35", end:"15:15"},  // CS 3200
-    {date:"2026-09-18", start:"15:25", end:"17:05"},  // DS 3500
-    // Mon Sep 21
-    {date:"2026-09-21", start:"13:05", end:"14:05"},  // RMV appointment
-    // Tue Sep 22
-    {date:"2026-09-22", start:"09:50", end:"11:30"},  // DS 3000
-    {date:"2026-09-22", start:"13:35", end:"15:15"},  // CS 3200
-    {date:"2026-09-22", start:"15:25", end:"17:05"},  // DS 3500
-    // Wed Sep 23
-    {date:"2026-09-23", start:"11:45", end:"13:25"},  // ECON 2315
-    // Thu Sep 24
-    {date:"2026-09-24", start:"10:30", end:"11:30"},  // ECON 1000 (TA)
-    // Fri Sep 25
-    {date:"2026-09-25", start:"09:50", end:"11:30"},  // DS 3000
-    {date:"2026-09-25", start:"11:45", end:"13:25"},  // ECON 2315
-    {date:"2026-09-25", start:"13:35", end:"15:15"},  // CS 3200
-    {date:"2026-09-25", start:"15:25", end:"17:05"},  // DS 3500
-    // Tue Sep 29
-    {date:"2026-09-29", start:"09:50", end:"11:30"},  // DS 3000
-    {date:"2026-09-29", start:"13:35", end:"15:15"},  // CS 3200
-    {date:"2026-09-29", start:"15:25", end:"17:05"}   // DS 3500
+    {date:"2026-09-15", start:"09:50", end:"11:30"}, {date:"2026-09-15", start:"13:35", end:"15:15"},
+    {date:"2026-09-15", start:"15:25", end:"17:05"}, {date:"2026-09-15", start:"17:00", end:"18:30"},
+    {date:"2026-09-16", start:"11:45", end:"13:25"}, {date:"2026-09-16", start:"13:00", end:"14:00"},
+    {date:"2026-09-16", start:"14:30", end:"15:30"},
+    {date:"2026-09-17", start:"10:30", end:"11:30"},
+    {date:"2026-09-18", start:"09:50", end:"11:30"}, {date:"2026-09-18", start:"11:45", end:"13:25"},
+    {date:"2026-09-18", start:"13:35", end:"15:15"}, {date:"2026-09-18", start:"15:25", end:"17:05"},
+    {date:"2026-09-21", start:"13:05", end:"14:05"},
+    {date:"2026-09-22", start:"09:50", end:"11:30"}, {date:"2026-09-22", start:"13:35", end:"15:15"},
+    {date:"2026-09-22", start:"15:25", end:"17:05"},
+    {date:"2026-09-23", start:"11:45", end:"13:25"},
+    {date:"2026-09-24", start:"10:30", end:"11:30"},
+    {date:"2026-09-25", start:"09:50", end:"11:30"}, {date:"2026-09-25", start:"11:45", end:"13:25"},
+    {date:"2026-09-25", start:"13:35", end:"15:15"}, {date:"2026-09-25", start:"15:25", end:"17:05"},
+    {date:"2026-09-29", start:"09:50", end:"11:30"}, {date:"2026-09-29", start:"13:35", end:"15:15"},
+    {date:"2026-09-29", start:"15:25", end:"17:05"}
   ],
 
-  // OPTIONAL — publish iCloud / Outlook(Teams) calendars as read-only ICS feeds so
-  // new events block automatically. Only busy start/end times are read; titles never show.
-  icsFeeds: [],
-  corsProxy: "https://corsproxy.io/?url=",
-
-  // DURABLE STORAGE — paste your Google Apps Script /exec URL in BOTH fields so every
-  // submission is written to your Google Sheet and the hidden log reads from it.
-  // See the companion Code.gs file for the 5-minute setup. Leave blank to run
-  // email-only (requests still reach you by email; hidden log shows this browser only).
-  saveEndpoint: "",
-  listEndpoint: ""
+  // REQUIRED for live slot-blocking + the shared request panel.
+  // Paste your Google Apps Script /exec URL here (see Code.gs setup).
+  endpoint: ""
 };
 
 /* ============================================================================ */
@@ -247,7 +215,8 @@ const DOWKEYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const DOWFULL=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const MONS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-let busyIntervals = [];
+let busyIntervals = [];       // your calendar commitments
+let bookedSlots = new Set();  // ISO start times already taken by students
 let selectedDate = null;
 let selectedSlot = null;
 
@@ -265,6 +234,7 @@ function ymd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"
 function atTime(dateObj,hhmm){const[h,m]=hhmm.split(":").map(Number);const d=new Date(dateObj);d.setHours(h,m,0,0);return d;}
 function fmtTime(d){let h=d.getHours(),m=d.getMinutes();const ap=h>=12?"PM":"AM";h=h%12;if(h===0)h=12;return h+(m?":"+String(m).padStart(2,"0"):"")+" "+ap;}
 function overlapsBusy(s,e){for(const b of busyIntervals){if(s<b.end&&e>b.start)return true;}return false;}
+function pad(n){return String(n).padStart(2,"0")}
 
 CONFIG.manualBusy.forEach(b=>{const d=new Date(b.date+"T00:00:00");busyIntervals.push({start:atTime(d,b.start),end:atTime(d,b.end)});});
 
@@ -279,7 +249,8 @@ function buildDays(){
     while(true){
       const slotEnd=new Date(cursor.getTime()+CONFIG.meetingMinutes*60000);
       if(slotEnd>windowEnd)break;
-      if(cursor>=notBefore && !overlapsBusy(cursor,slotEnd)) slots.push(new Date(cursor));
+      const iso=cursor.toISOString();
+      if(cursor>=notBefore && !overlapsBusy(cursor,slotEnd) && !bookedSlots.has(iso)) slots.push(new Date(cursor));
       cursor=new Date(cursor.getTime()+CONFIG.meetingMinutes*60000);
     }
     if(slots.length)days.push({date:day,key:ymd(day),slots});
@@ -315,6 +286,8 @@ function render(){
     el.onclick=()=>{selectedSlot=s;showConfirm(day.date,s);render();};
     grid.appendChild(el);
   });
+  // if a chosen slot just got taken by someone else, drop the confirm form
+  if(selectedSlot && bookedSlots.has(selectedSlot.toISOString())){ selectedSlot=null; hideConfirm(); }
 }
 
 function showConfirm(dateObj,slot){
@@ -325,8 +298,19 @@ function showConfirm(dateObj,slot){
 }
 function hideConfirm(){$("confirm").classList.remove("show");}
 
-function pad(n){return String(n).padStart(2,"0")}
+/* ---- calendar links + invite ---- */
 function icsStamp(d){return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"T"+pad(d.getHours())+pad(d.getMinutes())+"00";}
+function localIso(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes())+":00";}
+function outlookLink(start,end,title,details){
+  return "https://outlook.office.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent"+
+    "&subject="+encodeURIComponent(title)+"&startdt="+localIso(start)+"&enddt="+localIso(end)+
+    "&body="+encodeURIComponent(details)+"&location="+encodeURIComponent(CONFIG.where);
+}
+function googleLink(start,end,title,details){
+  return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(title)+
+    "&dates="+icsStamp(start)+"/"+icsStamp(end)+"&details="+encodeURIComponent(details)+
+    "&location="+encodeURIComponent(CONFIG.where);
+}
 function makeInvite(name,about){
   const end=new Date(selectedSlot.getTime()+CONFIG.meetingMinutes*60000);
   const desc=(about?("About: "+about.replace(/\n/g," ")+"\\n"):"")+"Requested by "+name;
@@ -340,91 +324,121 @@ function makeInvite(name,about){
   URL.revokeObjectURL(url);
 }
 
+/* ---- local + remote store ---- */
 function loadLog(){try{return JSON.parse(localStorage.getItem(LS_KEY)||"[]");}catch(e){return[];}}
 function saveLog(rows){try{localStorage.setItem(LS_KEY,JSON.stringify(rows));}catch(e){}}
 function addLocal(rec){const rows=loadLog();rows.unshift(rec);saveLog(rows);}
 
+function jsonp(base, params){
+  return new Promise((resolve,reject)=>{
+    const cb="__mcb"+Date.now()+Math.floor(Math.random()*100000);
+    const t=setTimeout(()=>{cleanup();reject(new Error("timeout"));},9000);
+    function cleanup(){clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
+    window[cb]=data=>{cleanup();resolve(data);};
+    const q=Object.keys(params||{}).map(k=>encodeURIComponent(k)+"="+encodeURIComponent(params[k])).join("&");
+    const s=document.createElement("script");
+    s.src=base+(base.indexOf("?")>-1?"&":"?")+q+"&callback="+cb;
+    s.onerror=()=>{cleanup();reject(new Error("load"));};
+    document.body.appendChild(s);
+  });
+}
+
+// pull all bookings from the store, refresh the taken-slots index
+async function pullBookings(){
+  let remote=null;
+  if(CONFIG.endpoint){
+    try{ const data=await jsonp(CONFIG.endpoint,{action:"list"}); remote=Array.isArray(data)?data:(data&&data.rows?data.rows:null); }catch(e){ remote=null; }
+  }
+  bookedSlots=new Set();
+  (remote||[]).forEach(r=>{ if(r.slotISO) bookedSlots.add(r.slotISO); });
+  loadLog().forEach(r=>{ if(r.slotISO) bookedSlots.add(r.slotISO); }); // same-browser safety
+  return remote;
+}
+
+/* ---- submit ---- */
 $("bookBtn").onclick=async()=>{
   const name=$("mName").value.trim();
   const email=$("mEmail").value.trim();
   const about=$("mAbout").value.trim();
   if(!name||!email){alert("Please add your name and email.");return;}
 
+  const btn=$("bookBtn");btn.disabled=true;btn.textContent="Sending…";
+
+  // last-second check so two people don't grab the same slot
+  await pullBookings();
+  if(bookedSlots.has(selectedSlot.toISOString())){
+    btn.disabled=false;btn.textContent="Request this time";
+    alert("That time was just booked by someone else. Please pick another.");
+    selectedSlot=null;hideConfirm();render();return;
+  }
+
   const end=new Date(selectedSlot.getTime()+CONFIG.meetingMinutes*60000);
   const when=DOWFULL[selectedSlot.getDay()]+", "+MONS[selectedSlot.getMonth()]+" "+selectedSlot.getDate()+
              " · "+fmtTime(selectedSlot)+"–"+fmtTime(end)+" "+CONFIG.timezoneLabel;
-
   const rec={name,email,about,when,slotISO:selectedSlot.toISOString(),submittedAt:new Date().toISOString()};
 
-  // 1) durable copy on this device (never blocks)
-  addLocal(rec);
-  // 2) durable copy in your Google Sheet (survives across all devices)
-  if(CONFIG.saveEndpoint){
-    try{ await fetch(CONFIG.saveEndpoint,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(rec)}); }catch(e){}
+  addLocal(rec); // never lose it locally
+
+  // save to the shared store; a readable result lets us catch a just-taken slot
+  let saved=true, taken=false;
+  if(CONFIG.endpoint){
+    const params={action:"save",name,email,about,when,slotISO:rec.slotISO,submittedAt:rec.submittedAt};
+    const qlen=(CONFIG.endpoint+JSON.stringify(params)).length;
+    try{
+      if(qlen<1900){
+        const res=await jsonp(CONFIG.endpoint,params);
+        if(res&&res.ok===false&&res.reason==="taken"){taken=true;}
+      }else{
+        await fetch(CONFIG.endpoint,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(rec)});
+      }
+    }catch(e){
+      try{ await fetch(CONFIG.endpoint,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(rec)}); }catch(e2){ saved=false; }
+    }
   }
-  // 3) email heads-up + invite file
+
+  if(taken){
+    btn.disabled=false;btn.textContent="Request this time";
+    await pullBookings();alert("That time was just booked by someone else. Please pick another.");
+    selectedSlot=null;hideConfirm();render();return;
+  }
+
+  bookedSlots.add(rec.slotISO); // block it here immediately
+
+  // email to Muad with two one-click "add to my calendar" links
+  const title="Peer mentor 1-on-1: "+name;
+  const details="Mentee: "+name+" ("+email+")"+(about?" — "+about.replace(/\n/g," "):"");
+  const outlook=outlookLink(selectedSlot,end,title,details);
+  const gcal=googleLink(selectedSlot,end,title,details);
   const subject="Peer mentor meeting: "+name+" — "+when;
   const bodyLines=["Hi Muad,","","I'd like to book a 1-on-1:","",
-    "When: "+when,"Name: "+name,"Email: "+email, about?("About me: "+about):"", "","Thanks!"].filter(Boolean);
+    "When: "+when,"Name: "+name,"Email: "+email, about?("About me: "+about):"", "",
+    "Add to your calendar:","Outlook: "+outlook,"Google: "+gcal, "","Thanks!"].filter(Boolean);
   const mailto="mailto:"+encodeURIComponent(CONFIG.bookingEmail)+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(bodyLines.join("\n"));
+
   makeInvite(name,about);
   window.location.href=mailto;
 
   $("picker").style.display="none";$("confirm").classList.remove("show");
-  $("doneMsg").textContent="Your request is in. Your email app also opened with a copy for Muad — hit send if you'd like, and a calendar invite downloaded for you to keep.";
+  $("doneMsg").textContent = saved
+    ? "Your request is in and that time is now held. Your email app opened a copy for Muad — hit send, and a calendar invite downloaded for you."
+    : "Saved on this device and your email app opened a copy for Muad — please hit send so he receives it. A calendar invite downloaded for you.";
   $("done").classList.add("show");
+  btn.disabled=false;btn.textContent="Request this time";
 };
-$("again").onclick=()=>{selectedSlot=null;$("mAbout").value="";$("done").classList.remove("show");$("picker").style.display="";render();};
+$("again").onclick=async()=>{selectedSlot=null;$("mAbout").value="";$("done").classList.remove("show");$("picker").style.display="";await pullBookings();render();};
 
-/* ---- ICS feeds ---- */
-function parseICS(text){
-  const out=[];const lines=text.replace(/\r\n[ \t]/g,"").split(/\r?\n/);let cur=null;
-  const parse=v=>{const m=v.match(/(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?/);if(!m)return null;
-    const[_,Y,Mo,D,h,mi,s,z]=m;if(z)return new Date(Date.UTC(+Y,+Mo-1,+D,+(h||0),+(mi||0),+(s||0)));
-    return new Date(+Y,+Mo-1,+D,+(h||0),+(mi||0),+(s||0));};
-  for(const line of lines){
-    if(line==="BEGIN:VEVENT")cur={};
-    else if(line==="END:VEVENT"){if(cur&&cur.start&&cur.end)out.push(cur);cur=null;}
-    else if(cur){
-      if(line.startsWith("DTSTART"))cur.start=parse(line.split(":").pop());
-      else if(line.startsWith("DTEND"))cur.end=parse(line.split(":").pop());
-      else if(line.startsWith("STATUS:")&&line.includes("CANCELLED"))cur.cancelled=true;
-    }
-  }
-  return out.filter(e=>!e.cancelled).map(e=>({start:e.start,end:e.end}));
+/* ---- refresh controls ---- */
+async function refresh(spin){
+  if(spin){$("refreshBtn").classList.add("spin");}
+  await pullBookings();render();
+  if(spin){setTimeout(()=>$("refreshBtn").classList.remove("spin"),600);}
 }
-async function loadFeeds(){
-  if(!CONFIG.icsFeeds||!CONFIG.icsFeeds.length){render();return;}
-  const note=$("syncNote");note.className="sync-note show";note.textContent="Checking your calendar for conflicts…";
-  let ok=0;
-  for(const feed of CONFIG.icsFeeds){
-    try{const res=await fetch(CONFIG.corsProxy+encodeURIComponent(feed));if(!res.ok)throw 0;
-      busyIntervals=busyIntervals.concat(parseICS(await res.text()).filter(e=>e.start&&e.end));ok++;}catch(e){}
-  }
-  if(ok===CONFIG.icsFeeds.length){note.className="sync-note show";note.textContent="Calendar synced — busy times are hidden.";}
-  else if(ok>0){note.className="sync-note show";note.textContent="Partially synced. Some times may still show as open.";}
-  else{note.className="sync-note warn show";note.textContent="Couldn't reach your calendar right now — showing your set hours.";}
-  render();
-}
+$("refreshBtn").onclick=()=>refresh(true);
+setInterval(()=>refresh(false), Math.max(15,CONFIG.refreshSeconds)*1000);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) refresh(false); });
 
 /* ---- hidden admin log: double-click the small role text ---- */
 $("role").addEventListener("dblclick",openAdmin);
-function jsonp(url){
-  return new Promise((resolve,reject)=>{
-    const cb="__mcb"+Date.now()+Math.floor(Math.random()*1000);
-    const t=setTimeout(()=>{cleanup();reject();},8000);
-    function cleanup(){clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
-    window[cb]=data=>{cleanup();resolve(data);};
-    const s=document.createElement("script");
-    s.src=url+(url.indexOf("?")>-1?"&":"?")+"callback="+cb;
-    s.onerror=()=>{cleanup();reject();};
-    document.body.appendChild(s);
-  });
-}
-async function fetchRemote(){
-  if(!CONFIG.listEndpoint)return null;
-  try{const data=await jsonp(CONFIG.listEndpoint);return Array.isArray(data)?data:(data&&data.rows?data.rows:null);}catch(e){return null;}
-}
 function esc(s){return String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
 function csvEscape(v){v=(v==null?"":String(v));return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
 function rowsToCsv(rows){
@@ -434,9 +448,9 @@ function rowsToCsv(rows){
 }
 async function openAdmin(){
   $("adminMeta").textContent="Loading…";$("adminBody").innerHTML="";$("admin").classList.add("show");
-  const remote=await fetchRemote();
+  const remote=await pullBookings();
   const rows=remote||loadLog();
-  const src=remote?"Google Sheet (all devices)":(CONFIG.listEndpoint?"Sheet unreachable — showing this browser only":"this browser only");
+  const src=remote?"Google Sheet (all devices)":(CONFIG.endpoint?"store unreachable — showing this browser only":"this browser only (no store connected)");
   $("adminMeta").textContent=rows.length+" request"+(rows.length===1?"":"s")+" · source: "+src;
   const body=$("adminBody");
   if(!rows.length){body.innerHTML='<div class="admin-empty">No requests yet.</div>';}
@@ -445,15 +459,16 @@ async function openAdmin(){
     rows.forEach(r=>{html+='<tr><td>'+esc(r.when)+'</td><td>'+esc(r.name)+'</td><td class="email">'+esc(r.email)+'</td><td class="about">'+esc(r.about||"—")+'</td></tr>';});
     html+='</tbody></table>';body.innerHTML=html;
   }
-  $("admin")._rows=rows;
+  $("admin")._rows=rows; render();
 }
+$("reloadAdmin").onclick=openAdmin;
 $("closeAdmin").onclick=()=>$("admin").classList.remove("show");
 $("admin").addEventListener("click",e=>{if(e.target===$("admin"))$("admin").classList.remove("show");});
 $("copyCsv").onclick=()=>{const rows=$("admin")._rows||[];navigator.clipboard.writeText(rowsToCsv(rows)).then(()=>{$("copyCsv").textContent="Copied";setTimeout(()=>$("copyCsv").textContent="Copy as CSV",1200);});};
 $("dlCsv").onclick=()=>{const rows=$("admin")._rows||[];const url=URL.createObjectURL(new Blob([rowsToCsv(rows)],{type:"text/csv"}));const a=document.createElement("a");a.href=url;a.download="mentee-bookings.csv";a.click();URL.revokeObjectURL(url);};
-$("clearLog").onclick=()=>{if(confirm("Clear the copy stored in THIS browser? Your Google Sheet is not affected.")){saveLog([]);openAdmin();}};
 
-loadFeeds();
+/* ---- boot ---- */
+(async()=>{ await pullBookings(); render(); })();
 </script>
 </body>
 </html>
