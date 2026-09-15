@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Book a meeting with Muad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --paper:#FBFAF7; --ink:#1B2A26; --accent:#2F6F5B; --accent-dark:#255A49;
+  --accent-soft:#EAF1EC; --muted:#6B7069; --line:#E5E2D9; --card:#FFFFFF;
+  --shadow:0 1px 2px rgba(27,42,38,.04), 0 8px 24px rgba(27,42,38,.05); --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:var(--paper);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;font-feature-settings:"cv05","ss01"}
+.wrap{max-width:1040px;margin:0 auto;padding:clamp(20px,5vw,64px) clamp(18px,4vw,40px)}
+.grid{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.35fr);gap:clamp(24px,4vw,56px);align-items:start}
+@media (max-width:820px){ .grid{grid-template-columns:1fr;gap:28px} }
+
+.intro{position:sticky;top:40px}
+@media (max-width:820px){ .intro{position:static} }
+.eyebrow{color:var(--accent);font-weight:600;font-size:.82rem;margin-bottom:14px;cursor:default;user-select:none}
+.name{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:clamp(2.4rem,6vw,3.5rem);line-height:1.02;letter-spacing:-.015em;margin-bottom:30px}
+.facts{border-top:1px solid var(--line);padding-top:22px;display:flex;flex-direction:column;gap:16px}
+.fact{display:flex;gap:13px;align-items:flex-start}
+.fact svg{flex:none;width:18px;height:18px;color:var(--accent);margin-top:2px}
+.fact .k{font-size:.78rem;color:var(--muted);margin-bottom:1px}
+.fact .v{font-size:.95rem;font-weight:500}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.panel-head{padding:22px 24px 0}
+.panel-head h2{font-size:1.12rem;font-weight:600}
+.panel-head p{color:var(--muted);font-size:.9rem;margin-top:3px}
+.sync-note{margin:16px 24px 0;padding:9px 12px;border-radius:9px;font-size:.8rem;background:var(--accent-soft);color:var(--accent-dark);display:none;align-items:center;gap:8px}
+.sync-note.show{display:flex}
+.sync-note.warn{background:#FBF3E6;color:#8A5B00}
+
+.rail-label{font-size:.78rem;color:var(--muted);font-weight:500;padding:22px 24px 10px}
+.rail{display:flex;gap:9px;overflow-x:auto;padding:0 24px 4px;scrollbar-width:thin}
+.rail::-webkit-scrollbar{height:6px}
+.rail::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
+.day{flex:none;width:64px;text-align:center;padding:11px 0 12px;border:1px solid var(--line);border-radius:11px;background:var(--paper);cursor:pointer;transition:border-color .12s,background .12s}
+.day:hover{border-color:#cfd6cd}
+.day .dow{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.day .dnum{font-size:1.25rem;font-weight:600;margin-top:3px}
+.day .mon{font-size:.68rem;color:var(--muted);margin-top:1px}
+.day[aria-selected="true"]{background:var(--accent);border-color:var(--accent)}
+.day[aria-selected="true"] .dow,.day[aria-selected="true"] .dnum,.day[aria-selected="true"] .mon{color:#fff}
+
+.slots-wrap{padding:22px 24px 26px}
+.slots-label{font-size:.78rem;color:var(--muted);font-weight:500;margin-bottom:12px}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:9px}
+.slot{padding:11px 8px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:.9rem;font-weight:500;color:var(--ink);cursor:pointer;text-align:center;font-variant-numeric:tabular-nums;transition:border-color .12s,background .12s}
+.slot:hover{border-color:var(--accent);background:var(--accent-soft)}
+.slot[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.empty{color:var(--muted);font-size:.92rem;padding:8px 0}
+
+.confirm{border-top:1px solid var(--line);padding:22px 24px 26px;display:none}
+.confirm.show{display:block}
+.confirm .chosen{font-size:.95rem;font-weight:600;margin-bottom:2px}
+.confirm .chosen span{color:var(--accent)}
+.confirm .sub{color:var(--muted);font-size:.85rem;margin-bottom:18px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.8rem;font-weight:500;margin-bottom:6px}
+.field input,.field textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font:inherit;font-size:.92rem;color:var(--ink);background:var(--paper)}
+.field input:focus,.field textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+.field textarea{resize:vertical;min-height:80px}
+.btn{width:100%;padding:12px;border:none;border-radius:10px;background:var(--accent);color:#fff;font:inherit;font-weight:600;font-size:.95rem;cursor:pointer;transition:background .12s}
+.btn:hover{background:var(--accent-dark)}
+
+.done{display:none;padding:34px 24px 40px;text-align:center}
+.done.show{display:block}
+.done .check{width:52px;height:52px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.done h3{font-size:1.15rem;margin-bottom:6px}
+.done p{color:var(--muted);font-size:.92rem;max-width:38ch;margin:0 auto 20px}
+.done .again{background:none;border:none;color:var(--accent);font:inherit;font-weight:600;cursor:pointer}
+
+.footer{margin-top:40px;text-align:center;color:var(--muted);font-size:.8rem}
+
+.admin{position:fixed;inset:0;background:rgba(27,42,38,.35);backdrop-filter:blur(2px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;z-index:50;overflow:auto}
+.admin.show{display:flex}
+.admin-card{background:#fff;border-radius:var(--radius);box-shadow:0 20px 60px rgba(27,42,38,.25);width:100%;max-width:820px;padding:24px}
+.admin-card h3{font-size:1.1rem}
+.admin-card .meta{color:var(--muted);font-size:.85rem;margin:3px 0 18px}
+.admin-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.admin-actions button{padding:8px 13px;border:1px solid var(--line);border-radius:9px;background:var(--paper);font:inherit;font-size:.85rem;font-weight:500;cursor:pointer}
+.admin-actions button:hover{border-color:var(--accent);color:var(--accent-dark)}
+.admin-actions .close{margin-left:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:.85rem}
+.tbl th,.tbl td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{font-weight:600;color:var(--muted);font-size:.76rem}
+.tbl td.email{color:var(--accent-dark)}
+.tbl td.about{max-width:320px}
+.admin-empty{color:var(--muted);font-size:.9rem;padding:20px 0;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="grid">
+
+    <aside class="intro">
+      <div class="eyebrow" id="role"></div>
+      <h1 class="name" id="mentorName"></h1>
+      <div class="facts">
+        <div class="fact">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <div><div class="k">Meeting length</div><div class="v" id="fLen"></div></div>
+        </div>
+        <div class="fact">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+          <div><div class="k">Where</div><div class="v" id="fWhere"></div></div>
+        </div>
+        <div class="fact">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
+          <div><div class="k">Time zone</div><div class="v" id="fTz"></div></div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="panel">
+      <div class="panel-head">
+        <h2>Pick a time</h2>
+        <p>Choose a day, then an open slot. I'll get your request and send a calendar invite back.</p>
+      </div>
+      <div class="sync-note" id="syncNote"></div>
+
+      <div id="picker">
+        <div class="rail-label">Days with openings</div>
+        <div class="rail" id="rail"></div>
+        <div class="slots-wrap">
+          <div class="slots-label" id="slotsLabel">Available times</div>
+          <div class="slots" id="slots"></div>
+        </div>
+      </div>
+
+      <div class="confirm" id="confirm">
+        <div class="chosen">Meeting on <span id="chosenWhen"></span></div>
+        <div class="sub">A 1-on-1 with Muad</div>
+        <div class="field"><label for="mName">Your name</label><input id="mName" autocomplete="name" placeholder="First and last name" /></div>
+        <div class="field"><label for="mEmail">Northeastern email</label><input id="mEmail" type="email" autocomplete="email" placeholder="lastname.f@northeastern.edu" /></div>
+        <div class="field"><label for="mAbout">Tell me about yourself</label><textarea id="mAbout" placeholder="Major, where you're transferring from, what you're into, anything you'd like to get out of meeting — whatever you'd like to share."></textarea></div>
+        <button class="btn" id="bookBtn">Request this time</button>
+      </div>
+
+      <div class="done" id="done">
+        <div class="check"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 13l4 4L19 7"/></svg></div>
+        <h3>Request sent</h3>
+        <p id="doneMsg"></p>
+        <button class="again" id="again">Book another time</button>
+      </div>
+    </main>
+  </div>
+  <div class="footer" id="footer"></div>
+</div>
+
+<div class="admin" id="admin">
+  <div class="admin-card">
+    <h3>Booking requests</h3>
+    <div class="meta" id="adminMeta"></div>
+    <div class="admin-actions">
+      <button id="copyCsv">Copy as CSV</button>
+      <button id="dlCsv">Download CSV</button>
+      <button id="clearLog">Clear local copy</button>
+      <button class="close" id="closeAdmin">Close</button>
+    </div>
+    <div id="adminBody"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   CONFIG — edit this block, then commit index.html to your repo.
+   ============================================================================ */
+const CONFIG = {
+  mentorName:  "Muad Abdi",
+  role:        "Peer Mentor",
+  where:       "Curry Student Center or Zoom (I'll confirm in the invite)",
+  bookingEmail:"abdi.mu@northeastern.edu",
+  meetingMinutes: 30,
+  dayStart: "08:00",        // earliest a meeting can start
+  dayEnd:   "19:00",        // latest a meeting can END (7 PM)
+  daysAhead: 14,            // next 2 weeks
+  minNoticeHours: 12,       // hide slots sooner than this
+  timezoneLabel: "Eastern Time (Boston)",
+  meetingDays: ["Mon","Tue","Wed","Thu","Fri"],
+
+  // Your commitments, read from your calendars (Boston wall-clock). Only busy
+  // start/end times are used — nothing about what the events are is shown.
+  // Recurring classes are listed on each date they occur in the window.
+  manualBusy: [
+    // Tue Sep 15
+    {date:"2026-09-15", start:"09:50", end:"11:30"},  // DS 3000
+    {date:"2026-09-15", start:"13:35", end:"15:15"},  // CS 3200
+    {date:"2026-09-15", start:"15:25", end:"17:05"},  // DS 3500
+    {date:"2026-09-15", start:"17:00", end:"18:30"},  // OSOP meeting (approx from Outlook)
+    // Wed Sep 16
+    {date:"2026-09-16", start:"11:45", end:"13:25"},  // ECON 2315
+    {date:"2026-09-16", start:"13:00", end:"14:00"},  // Trader Joe's interview
+    {date:"2026-09-16", start:"14:30", end:"15:30"},  // Artisan Partners quant interview
+    // Thu Sep 17
+    {date:"2026-09-17", start:"10:30", end:"11:30"},  // ECON 1000 (TA)
+    // Fri Sep 18
+    {date:"2026-09-18", start:"09:50", end:"11:30"},  // DS 3000
+    {date:"2026-09-18", start:"11:45", end:"13:25"},  // ECON 2315
+    {date:"2026-09-18", start:"13:35", end:"15:15"},  // CS 3200
+    {date:"2026-09-18", start:"15:25", end:"17:05"},  // DS 3500
+    // Mon Sep 21
+    {date:"2026-09-21", start:"13:05", end:"14:05"},  // RMV appointment
+    // Tue Sep 22
+    {date:"2026-09-22", start:"09:50", end:"11:30"},  // DS 3000
+    {date:"2026-09-22", start:"13:35", end:"15:15"},  // CS 3200
+    {date:"2026-09-22", start:"15:25", end:"17:05"},  // DS 3500
+    // Wed Sep 23
+    {date:"2026-09-23", start:"11:45", end:"13:25"},  // ECON 2315
+    // Thu Sep 24
+    {date:"2026-09-24", start:"10:30", end:"11:30"},  // ECON 1000 (TA)
+    // Fri Sep 25
+    {date:"2026-09-25", start:"09:50", end:"11:30"},  // DS 3000
+    {date:"2026-09-25", start:"11:45", end:"13:25"},  // ECON 2315
+    {date:"2026-09-25", start:"13:35", end:"15:15"},  // CS 3200
+    {date:"2026-09-25", start:"15:25", end:"17:05"},  // DS 3500
+    // Tue Sep 29
+    {date:"2026-09-29", start:"09:50", end:"11:30"},  // DS 3000
+    {date:"2026-09-29", start:"13:35", end:"15:15"},  // CS 3200
+    {date:"2026-09-29", start:"15:25", end:"17:05"}   // DS 3500
+  ],
+
+  // OPTIONAL — publish iCloud / Outlook(Teams) calendars as read-only ICS feeds so
+  // new events block automatically. Only busy start/end times are read; titles never show.
+  icsFeeds: [],
+  corsProxy: "https://corsproxy.io/?url=",
+
+  // DURABLE STORAGE — paste your Google Apps Script /exec URL in BOTH fields so every
+  // submission is written to your Google Sheet and the hidden log reads from it.
+  // See the companion Code.gs file for the 5-minute setup. Leave blank to run
+  // email-only (requests still reach you by email; hidden log shows this browser only).
+  saveEndpoint: "",
+  listEndpoint: ""
+};
+
+/* ============================================================================ */
+const LS_KEY = "muad_bookings_v1";
+const DOWKEYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const DOWFULL=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const MONS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+let busyIntervals = [];
+let selectedDate = null;
+let selectedSlot = null;
+
+const $ = id => document.getElementById(id);
+
+$("role").textContent = CONFIG.role;
+$("mentorName").textContent = CONFIG.mentorName;
+$("fLen").textContent = CONFIG.meetingMinutes + " minutes";
+$("fWhere").textContent = CONFIG.where;
+$("fTz").textContent = CONFIG.timezoneLabel;
+$("footer").textContent = "Times shown in " + CONFIG.timezoneLabel + ".";
+document.title = "Book a meeting with " + CONFIG.mentorName;
+
+function ymd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function atTime(dateObj,hhmm){const[h,m]=hhmm.split(":").map(Number);const d=new Date(dateObj);d.setHours(h,m,0,0);return d;}
+function fmtTime(d){let h=d.getHours(),m=d.getMinutes();const ap=h>=12?"PM":"AM";h=h%12;if(h===0)h=12;return h+(m?":"+String(m).padStart(2,"0"):"")+" "+ap;}
+function overlapsBusy(s,e){for(const b of busyIntervals){if(s<b.end&&e>b.start)return true;}return false;}
+
+CONFIG.manualBusy.forEach(b=>{const d=new Date(b.date+"T00:00:00");busyIntervals.push({start:atTime(d,b.start),end:atTime(d,b.end)});});
+
+function buildDays(){
+  const days=[];const now=new Date();
+  const notBefore=new Date(now.getTime()+CONFIG.minNoticeHours*3600*1000);
+  const start=new Date();start.setHours(0,0,0,0);
+  for(let i=0;i<=CONFIG.daysAhead;i++){
+    const day=new Date(start);day.setDate(start.getDate()+i);
+    if(!CONFIG.meetingDays.includes(DOWKEYS[day.getDay()])) continue;
+    const slots=[];let cursor=atTime(day,CONFIG.dayStart);const windowEnd=atTime(day,CONFIG.dayEnd);
+    while(true){
+      const slotEnd=new Date(cursor.getTime()+CONFIG.meetingMinutes*60000);
+      if(slotEnd>windowEnd)break;
+      if(cursor>=notBefore && !overlapsBusy(cursor,slotEnd)) slots.push(new Date(cursor));
+      cursor=new Date(cursor.getTime()+CONFIG.meetingMinutes*60000);
+    }
+    if(slots.length)days.push({date:day,key:ymd(day),slots});
+  }
+  return days;
+}
+
+function render(){
+  const days=buildDays();
+  const rail=$("rail");rail.innerHTML="";
+  if(!days.length){
+    $("slotsLabel").style.display="none";
+    $("slots").innerHTML='<div class="empty">No open times in the next two weeks. Check back soon or email me directly.</div>';
+    return;
+  }
+  if(!days.some(d=>d.key===selectedDate)) selectedDate=days[0].key;
+  days.forEach(d=>{
+    const el=document.createElement("button");
+    el.className="day";el.setAttribute("aria-selected",d.key===selectedDate);
+    el.innerHTML='<div class="dow">'+DOWKEYS[d.date.getDay()]+'</div><div class="dnum">'+d.date.getDate()+'</div><div class="mon">'+MONS[d.date.getMonth()]+'</div>';
+    el.onclick=()=>{selectedDate=d.key;selectedSlot=null;hideConfirm();render();};
+    rail.appendChild(el);
+  });
+  const day=days.find(d=>d.key===selectedDate);
+  const full=DOWFULL[day.date.getDay()]+", "+MONS[day.date.getMonth()]+" "+day.date.getDate();
+  $("slotsLabel").style.display="block";
+  $("slotsLabel").textContent="Available times · "+full;
+  const grid=$("slots");grid.innerHTML="";
+  day.slots.forEach(s=>{
+    const el=document.createElement("button");
+    el.className="slot";el.textContent=fmtTime(s);
+    el.setAttribute("aria-pressed",selectedSlot&&selectedSlot.getTime()===s.getTime());
+    el.onclick=()=>{selectedSlot=s;showConfirm(day.date,s);render();};
+    grid.appendChild(el);
+  });
+}
+
+function showConfirm(dateObj,slot){
+  $("done").classList.remove("show");$("picker").style.display="";
+  const when=DOWFULL[dateObj.getDay()]+", "+MONS[dateObj.getMonth()]+" "+dateObj.getDate()+" at "+fmtTime(slot);
+  $("chosenWhen").textContent=when;$("confirm").classList.add("show");
+  $("confirm").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function hideConfirm(){$("confirm").classList.remove("show");}
+
+function pad(n){return String(n).padStart(2,"0")}
+function icsStamp(d){return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"T"+pad(d.getHours())+pad(d.getMinutes())+"00";}
+function makeInvite(name,about){
+  const end=new Date(selectedSlot.getTime()+CONFIG.meetingMinutes*60000);
+  const desc=(about?("About: "+about.replace(/\n/g," ")+"\\n"):"")+"Requested by "+name;
+  const body=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Muad Peer Mentor//EN","BEGIN:VEVENT",
+    "UID:muad-"+selectedSlot.getTime()+"@peer-mentor","DTSTAMP:"+icsStamp(new Date()),
+    "DTSTART:"+icsStamp(selectedSlot),"DTEND:"+icsStamp(end),
+    "SUMMARY:1-on-1 with "+CONFIG.mentorName,"LOCATION:"+CONFIG.where.replace(/,/g,"\\,"),
+    "DESCRIPTION:"+desc,"END:VEVENT","END:VCALENDAR"].join("\r\n");
+  const url=URL.createObjectURL(new Blob([body],{type:"text/calendar"}));
+  const a=document.createElement("a");a.href=url;a.download="meeting-with-muad.ics";a.click();
+  URL.revokeObjectURL(url);
+}
+
+function loadLog(){try{return JSON.parse(localStorage.getItem(LS_KEY)||"[]");}catch(e){return[];}}
+function saveLog(rows){try{localStorage.setItem(LS_KEY,JSON.stringify(rows));}catch(e){}}
+function addLocal(rec){const rows=loadLog();rows.unshift(rec);saveLog(rows);}
+
+$("bookBtn").onclick=async()=>{
+  const name=$("mName").value.trim();
+  const email=$("mEmail").value.trim();
+  const about=$("mAbout").value.trim();
+  if(!name||!email){alert("Please add your name and email.");return;}
+
+  const end=new Date(selectedSlot.getTime()+CONFIG.meetingMinutes*60000);
+  const when=DOWFULL[selectedSlot.getDay()]+", "+MONS[selectedSlot.getMonth()]+" "+selectedSlot.getDate()+
+             " · "+fmtTime(selectedSlot)+"–"+fmtTime(end)+" "+CONFIG.timezoneLabel;
+
+  const rec={name,email,about,when,slotISO:selectedSlot.toISOString(),submittedAt:new Date().toISOString()};
+
+  // 1) durable copy on this device (never blocks)
+  addLocal(rec);
+  // 2) durable copy in your Google Sheet (survives across all devices)
+  if(CONFIG.saveEndpoint){
+    try{ await fetch(CONFIG.saveEndpoint,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(rec)}); }catch(e){}
+  }
+  // 3) email heads-up + invite file
+  const subject="Peer mentor meeting: "+name+" — "+when;
+  const bodyLines=["Hi Muad,","","I'd like to book a 1-on-1:","",
+    "When: "+when,"Name: "+name,"Email: "+email, about?("About me: "+about):"", "","Thanks!"].filter(Boolean);
+  const mailto="mailto:"+encodeURIComponent(CONFIG.bookingEmail)+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(bodyLines.join("\n"));
+  makeInvite(name,about);
+  window.location.href=mailto;
+
+  $("picker").style.display="none";$("confirm").classList.remove("show");
+  $("doneMsg").textContent="Your request is in. Your email app also opened with a copy for Muad — hit send if you'd like, and a calendar invite downloaded for you to keep.";
+  $("done").classList.add("show");
+};
+$("again").onclick=()=>{selectedSlot=null;$("mAbout").value="";$("done").classList.remove("show");$("picker").style.display="";render();};
+
+/* ---- ICS feeds ---- */
+function parseICS(text){
+  const out=[];const lines=text.replace(/\r\n[ \t]/g,"").split(/\r?\n/);let cur=null;
+  const parse=v=>{const m=v.match(/(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?/);if(!m)return null;
+    const[_,Y,Mo,D,h,mi,s,z]=m;if(z)return new Date(Date.UTC(+Y,+Mo-1,+D,+(h||0),+(mi||0),+(s||0)));
+    return new Date(+Y,+Mo-1,+D,+(h||0),+(mi||0),+(s||0));};
+  for(const line of lines){
+    if(line==="BEGIN:VEVENT")cur={};
+    else if(line==="END:VEVENT"){if(cur&&cur.start&&cur.end)out.push(cur);cur=null;}
+    else if(cur){
+      if(line.startsWith("DTSTART"))cur.start=parse(line.split(":").pop());
+      else if(line.startsWith("DTEND"))cur.end=parse(line.split(":").pop());
+      else if(line.startsWith("STATUS:")&&line.includes("CANCELLED"))cur.cancelled=true;
+    }
+  }
+  return out.filter(e=>!e.cancelled).map(e=>({start:e.start,end:e.end}));
+}
+async function loadFeeds(){
+  if(!CONFIG.icsFeeds||!CONFIG.icsFeeds.length){render();return;}
+  const note=$("syncNote");note.className="sync-note show";note.textContent="Checking your calendar for conflicts…";
+  let ok=0;
+  for(const feed of CONFIG.icsFeeds){
+    try{const res=await fetch(CONFIG.corsProxy+encodeURIComponent(feed));if(!res.ok)throw 0;
+      busyIntervals=busyIntervals.concat(parseICS(await res.text()).filter(e=>e.start&&e.end));ok++;}catch(e){}
+  }
+  if(ok===CONFIG.icsFeeds.length){note.className="sync-note show";note.textContent="Calendar synced — busy times are hidden.";}
+  else if(ok>0){note.className="sync-note show";note.textContent="Partially synced. Some times may still show as open.";}
+  else{note.className="sync-note warn show";note.textContent="Couldn't reach your calendar right now — showing your set hours.";}
+  render();
+}
+
+/* ---- hidden admin log: double-click the small role text ---- */
+$("role").addEventListener("dblclick",openAdmin);
+function jsonp(url){
+  return new Promise((resolve,reject)=>{
+    const cb="__mcb"+Date.now()+Math.floor(Math.random()*1000);
+    const t=setTimeout(()=>{cleanup();reject();},8000);
+    function cleanup(){clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
+    window[cb]=data=>{cleanup();resolve(data);};
+    const s=document.createElement("script");
+    s.src=url+(url.indexOf("?")>-1?"&":"?")+"callback="+cb;
+    s.onerror=()=>{cleanup();reject();};
+    document.body.appendChild(s);
+  });
+}
+async function fetchRemote(){
+  if(!CONFIG.listEndpoint)return null;
+  try{const data=await jsonp(CONFIG.listEndpoint);return Array.isArray(data)?data:(data&&data.rows?data.rows:null);}catch(e){return null;}
+}
+function esc(s){return String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+function csvEscape(v){v=(v==null?"":String(v));return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function rowsToCsv(rows){
+  const head=["Submitted","Meeting time","Name","Email","About"];
+  const body=rows.map(r=>[r.submittedAt,r.when,r.name,r.email,r.about].map(csvEscape).join(","));
+  return [head.join(","),...body].join("\n");
+}
+async function openAdmin(){
+  $("adminMeta").textContent="Loading…";$("adminBody").innerHTML="";$("admin").classList.add("show");
+  const remote=await fetchRemote();
+  const rows=remote||loadLog();
+  const src=remote?"Google Sheet (all devices)":(CONFIG.listEndpoint?"Sheet unreachable — showing this browser only":"this browser only");
+  $("adminMeta").textContent=rows.length+" request"+(rows.length===1?"":"s")+" · source: "+src;
+  const body=$("adminBody");
+  if(!rows.length){body.innerHTML='<div class="admin-empty">No requests yet.</div>';}
+  else{
+    let html='<table class="tbl"><thead><tr><th>Meeting time</th><th>Name</th><th>Email</th><th>About</th></tr></thead><tbody>';
+    rows.forEach(r=>{html+='<tr><td>'+esc(r.when)+'</td><td>'+esc(r.name)+'</td><td class="email">'+esc(r.email)+'</td><td class="about">'+esc(r.about||"—")+'</td></tr>';});
+    html+='</tbody></table>';body.innerHTML=html;
+  }
+  $("admin")._rows=rows;
+}
+$("closeAdmin").onclick=()=>$("admin").classList.remove("show");
+$("admin").addEventListener("click",e=>{if(e.target===$("admin"))$("admin").classList.remove("show");});
+$("copyCsv").onclick=()=>{const rows=$("admin")._rows||[];navigator.clipboard.writeText(rowsToCsv(rows)).then(()=>{$("copyCsv").textContent="Copied";setTimeout(()=>$("copyCsv").textContent="Copy as CSV",1200);});};
+$("dlCsv").onclick=()=>{const rows=$("admin")._rows||[];const url=URL.createObjectURL(new Blob([rowsToCsv(rows)],{type:"text/csv"}));const a=document.createElement("a");a.href=url;a.download="mentee-bookings.csv";a.click();URL.revokeObjectURL(url);};
+$("clearLog").onclick=()=>{if(confirm("Clear the copy stored in THIS browser? Your Google Sheet is not affected.")){saveLog([]);openAdmin();}};
+
+loadFeeds();
+</script>
+</body>
+</html>
